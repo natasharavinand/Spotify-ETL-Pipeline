@@ -1,3 +1,10 @@
+'''
+Below is an ETL pipeline that connects to the Spotify API and extracts recent song information (ex. song name, song artist,
+release year, time played, and timestamp). The data is then validated using basic data engineering principles and loaded into an
+SQLite database using SQLAlchemy.
+
+'''
+
 # importing libraries
 
 import os
@@ -19,7 +26,7 @@ DATABASE_LOCATION = "sqlite:///played_tracks.sqlite"
 USER_ID = os.getenv('USER_NAME')
 TOKEN = os.getenv('OAUTH_TOKEN')
 
-# data validation function
+# data validation function (transform)
 
 def check_if_valid_data(df: pd.DataFrame) -> bool:
     # Check if empty dataframe
@@ -103,3 +110,32 @@ if __name__ == '__main__':
     # Validate data
     if check_if_valid_data(song_df):
         print("Data valid, proceeding to loading stage.")
+        
+    # Load data
+    
+    engine = sqlalchemy.create_engine(DATABASE_LOCATION)
+    connection = sqlite3.connect('played_tracks.sqlite')
+    cursor = connection.cursor()
+
+    sql_query = """
+    CREATE TABLE IF NOT EXISTS my_played_tracks(
+        song_name VARCHAR(200),
+        album_name VARCHAR(200),
+        artist_name VARCHAR(200),
+        release_year VARCHAR(200),
+        played_at VARCHAR(200),
+        timestamp VARCHAR(200),
+        CONSTRAINT primary_key_constraint PRIMARY KEY (played_at)        
+    )
+    """
+
+    cursor.execute(sql_query)
+    print("Opened database successfully.")
+
+    try:
+        song_df.to_sql("my_played_tracks", engine, index=False, if_exists="append")
+    except:
+        print("Data already exists in the database (unique constraint failed).")
+
+    connection.close()
+    print("Closed database successfully.")
